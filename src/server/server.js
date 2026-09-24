@@ -1,8 +1,11 @@
 const http=require("http");
+const identities = require("./identities");
+
 
 const server = http.createServer((req,res)=>{
-    if(req.url==="/"){
-        res.write("Hello World");
+    if(req.url.startsWith("/identity/")){
+        const id = req.url.split("/")[2];
+        res.write(JSON.stringify(identities[id]));
         res.end();
     }
 })
