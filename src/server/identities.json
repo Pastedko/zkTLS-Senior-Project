@@ -1,0 +1,32 @@
+[
+    {
+        "id": 0,
+        "name": "Alice Smith",
+        "birthDate": "19900101",
+        "password": "password123"
+    },
+    {
+        "id": 1,   
+        "name": "Bob Johnson",
+        "birthDate": "19850515",
+        "password": "securepass456"
+    },
+    {
+        "id": 2,
+        "name": "Charlie Brown",
+        "birthDate": "20051230",
+        "password": "charlie789"
+    },
+    {
+        "id": 3,
+        "name": "David Wilson",
+        "birthDate": "20121122",
+        "password": "davidpass321"
+    },
+    {
+        "id": 4,
+        "name": "Eve Davis",
+        "birthDate": "20150714",
+        "password": "evepassword987"
+    }    
+]
