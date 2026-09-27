@@ -26,6 +26,7 @@ function getUserFromSession(req) {
         const token = cookie.slice("sessionToken=".length);
         const userId = sessions.get(token);
         const user = identities.find(u => u.id === userId);
+        return user;
 }
 
 const server = https.createServer({
@@ -34,7 +35,13 @@ const server = https.createServer({
 }, (req, res) => {
 
     if (req.method === "GET" && req.url === "/identity") {
-        getUserFromSession(req);
+        const user=getUserFromSession(req);
+        if(!user){
+            res.statusCode = 401;
+            res.write("Unauthorized");
+            res.end();
+            return;
+        }
         res.write(JSON.stringify(user));
         res.end();
     }
