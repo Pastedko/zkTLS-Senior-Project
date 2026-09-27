@@ -21,7 +21,22 @@ const server = https.createServer({
     //     res.end();
     // }
     if (req.method === "GET" && req.url === "/identity") {
-        const cookie = req.headers.cookie;
+        const cookie = (req.headers.cookie || "")
+        .split(";")
+        .map(part => part.trim())
+        .find(part => part.startsWith("sessionToken="));
+
+        if (!cookie) {
+            res.statusCode = 401;
+            res.write("Unauthorized");
+            res.end();
+            return;
+        }
+        const token = cookie.slice("sessionToken=".length);
+        const userId = sessions.get(token);
+        const user = identities.find(u => u.id === userId);
+        res.write(JSON.stringify(user));
+        res.end();
     }
 
     if (req.method === "POST" && req.url === "/login") {
