@@ -11,17 +11,8 @@ function createCookieSession(userId) {
     return sessionToken;
 }
 
-const server = https.createServer({
-    key: fs.readFileSync("key.pem"),
-    cert: fs.readFileSync("cert.pem")
-}, (req, res) => {
-    // if(req.url.startsWith("/identity/")){
-    //     const id = req.url.split("/")[2];
-    //     res.write(JSON.stringify(identities[id]));
-    //     res.end();
-    // }
-    if (req.method === "GET" && req.url === "/identity") {
-        const cookie = (req.headers.cookie || "")
+function getUserFromSession(req) {
+    const cookie = (req.headers.cookie || "")
         .split(";")
         .map(part => part.trim())
         .find(part => part.startsWith("sessionToken="));
@@ -35,6 +26,15 @@ const server = https.createServer({
         const token = cookie.slice("sessionToken=".length);
         const userId = sessions.get(token);
         const user = identities.find(u => u.id === userId);
+}
+
+const server = https.createServer({
+    key: fs.readFileSync("key.pem"),
+    cert: fs.readFileSync("cert.pem")
+}, (req, res) => {
+
+    if (req.method === "GET" && req.url === "/identity") {
+        getUserFromSession(req);
         res.write(JSON.stringify(user));
         res.end();
     }
@@ -66,5 +66,5 @@ const server = https.createServer({
 })
 
 server.listen(3000, () => {
-    console.log("Server running at http://localhost:3000");
+    console.log("Server running at https://localhost:3000");
 });
