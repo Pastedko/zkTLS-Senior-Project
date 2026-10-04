@@ -1,5 +1,6 @@
 const https = require("https");
 const fs = require("fs");
+const { Buffer } = require("node:buffer");
 const { randomBytes } = require("node:crypto");
 const identities = require("./identities");
 
@@ -39,7 +40,9 @@ const server = https.createServer({
             res.end();
             return;
         }
-        res.write(JSON.stringify({ id: user.id, name: user.name, birthdate: user.birthDate }));
+        const response = JSON.stringify({ id: user.id, name: user.name, birthdate: user.birthDate });
+        res.write(response);
+        console.log("Response length:", Buffer.byteLength(response));
         res.end();
     }
 
