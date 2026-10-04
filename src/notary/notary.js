@@ -1,6 +1,8 @@
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
+const sha256 = require("./hashing_algorithms/sha256");
+const { randomBytes } = require("node:crypto");
 
 //After testing with differnt id and name lengths it is safe to set the max response length to 100 bytes
 //as anything above that value would be unreasonable.
@@ -13,8 +15,12 @@ const serverCertificate = fs.readFileSync(
 async function attest(address, cookie) {
     const responseBytes = await makeRequest(address, cookie);
     const canonicalIdentity = validateCanonicalResponse(responseBytes);
-    
+    const commitment = createCommitment(responseBytes, randomBytes(32));
 }
+
+function createCommitment(responseBytes, randomness){
+    return sha256(responseBytes,randomness)
+} 
 
 function validateCanonicalResponse(responseBytes) {
     if(responseBytes.length < 1 || responseBytes.length > MAX_RESPONSE_LENGTH) {
@@ -31,7 +37,9 @@ function validateCanonicalResponse(responseBytes) {
         throw new Error("Response is not valid UTF-8 or JSON");
     }
 
-    if(identity===null|| typeof identity)
+    if(identity===null|| typeof identity!== "object" || Array.isArray(identity)) {
+        throw new Error("Response is not a valid JSON object");
+    }
 
     //validate required fields
     if(identity.id === undefined || identity.name === undefined || identity.birthdate === undefined) {
@@ -47,6 +55,11 @@ function validateCanonicalResponse(responseBytes) {
     //validate id range
     if(identity.id < 0 || identity.id > 999999999 || !Number.isSafeInteger(identity.id)) {
         throw new Error("ID is out of valid range");
+    }
+
+    //validate name length
+    if(identity.name.length < 1 || identity.name.length > 50) {
+        throw new Error("Name length is out of valid range");
     }
 
     //validate birthdate
@@ -110,28 +123,27 @@ function isValidBirthdate(birthdate) {
 }
 
 async function makeRequest(address, cookie){
+    return new Promise((resolve,reject)=>{
     const request = https.get(address, {
         headers: {
             "Cookie": cookie
         },
         ca: serverCertificate
     }, (res) => {
-        let data = "";
+        const chunkdata = [];
         res.on("data", (chunk) => {
-            data += chunk;
+            chunkdata.push(chunk);
         });
         res.on("end", () => {
-            const responseBytes = Buffer.from(data, "utf8");
-            return responseBytes;
+            resolve(Buffer.concat(chunkdata));
         });
     });
-    request.on("error", (err) => {
-        throw new Error(`Request error: ${err.message}`);
-    });
+    request.on("error", reject);
+})
 }
 
 
-makeRequest(
+attest(
     "https://localhost:3000/identity",
-    "sessionToken=9d63b6b59b6ce459d475e0d8cc9e5ccccbe1eb16547668cd82b7c27f94bad7da"
+    "sessionToken=53e3811cba403306a1ec20c97190f00f733c67682dd04f847e743e9decba3624"
 )
