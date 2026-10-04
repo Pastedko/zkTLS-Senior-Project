@@ -18,9 +18,6 @@ function getUserFromSession(req) {
         .find(part => part.startsWith("sessionToken="));
 
         if (!cookie) {
-            res.statusCode = 401;
-            res.write("Unauthorized");
-            res.end();
             return;
         }
         const token = cookie.slice("sessionToken=".length);
@@ -42,7 +39,7 @@ const server = https.createServer({
             res.end();
             return;
         }
-        res.write(JSON.stringify(user));
+        res.write(JSON.stringify({ id: user.id, name: user.name, birthdate: user.birthDate }));
         res.end();
     }
 
