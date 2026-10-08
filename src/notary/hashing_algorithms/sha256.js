@@ -29,7 +29,7 @@ function sha256(inputBytes,randomness){
 function padMessage(messageBytes) {
     // Calculate the total length of the padded message
     // original length + 1 byte for the '1' bit + 8 bytes for the length of the initial message
-    const totalLength = Math.ceil((messageBytes.length + 9  + 64) / 64) * 64;
+    const totalLength = Math.ceil((messageBytes.length + 9 ) / 64) * 64;
 
     // Create a new empty buffer with the total length
     const paddedMessage = Buffer.alloc(totalLength);
@@ -66,8 +66,8 @@ function createMessageSchedule(paddedMessage) {
         const x = words[i - 15];
         const y = words[i - 2];
 
-        const sigma0 = rightRotate(words[x], 7) ^ rightRotate(words[x], 18) ^ (words[x] >>> 3);
-        const sigma1 = rightRotate(words[y], 17) ^ rightRotate(words[y], 19) ^ (words[y] >>> 10);
+        const sigma0 = rightRotate(x, 7) ^ rightRotate(x, 18) ^ (x >>> 3);
+        const sigma1 = rightRotate(y, 17) ^ rightRotate(y, 19) ^ (y >>> 10);
         words[i] = (words[i - 16] + sigma0 + words[i - 7] + sigma1) >>> 0;
     }
 
@@ -132,7 +132,6 @@ function compressBlock(words, hash) {
     }
 
     return hash;
-}
 }
 
 module.exports = sha256;
