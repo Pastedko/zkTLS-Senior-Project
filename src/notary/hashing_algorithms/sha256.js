@@ -26,7 +26,7 @@ function sha256(inputBytes,randomness){
     return digest;
 }
 
-function padMessage(messageBytes) {{
+function padMessage(messageBytes) {
     // Calculate the total length of the padded message
     // original length + 1 byte for the '1' bit + 8 bytes for the length of the initial message
     const totalLength = Math.ceil((messageBytes.length + 9  + 64) / 64) * 64;
