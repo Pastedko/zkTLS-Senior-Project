@@ -28,8 +28,8 @@ function getUserFromSession(req) {
 }
 
 const server = https.createServer({
-    key: fs.readFileSync("key.pem"),
-    cert: fs.readFileSync("cert.pem")
+    key: fs.readFileSync("./keys/key.pem"),
+    cert: fs.readFileSync("./keys/cert.pem")
 }, (req, res) => {
 
     if (req.method === "GET" && req.url === "/identity") {

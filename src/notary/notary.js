@@ -2,24 +2,61 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const sha256 = require("./hashing_algorithms/sha256");
-const { randomBytes } = require("node:crypto");
+const {
+    randomBytes,
+    createPrivateKey,
+    sign
+} = require("node:crypto");
+
+
+const signingKey = createPrivateKey(
+    fs.readFileSync(
+        path.join(__dirname, "keys/private.pem")
+    )
+);
+
+const EXPECTED_SERVER_ADDRESS =
+    "https://localhost:3000/identity";
 
 //After testing with differnt id and name lengths it is safe to set the max response length to 100 bytes
 //as anything above that value would be unreasonable.
 const MAX_RESPONSE_LENGTH = 100;
 
 const serverCertificate = fs.readFileSync(
-    path.join(__dirname, "../server/cert.pem")
+    path.join(__dirname, "../server/keys/cert.pem")
 );
 
 async function attest(address, cookie) {
     const responseBytes = await makeRequest(address, cookie);
     const canonicalIdentity = validateCanonicalResponse(responseBytes);
-    const commitment = createCommitment(responseBytes, randomBytes(32));
+    const randomness = randomBytes(32);
+    const commitment = createCommitment(responseBytes, randomness);
+    const signedAttestation = signAttestation(commitment, address);
+    return {
+        privateProverInput:{
+            response: responseBytes,
+            randomnessHex: randomness
+        },
+
+        publicAttestation: {
+            commitment,
+            signedAttestation
+        }
+    }
+
+}
+
+function signAttestation(commitment,serverAddress) {
+    const fullMessage = JSON.stringify({
+        commitment: commitment.toString("hex"),
+        serverAddress: serverAddress
+    });
+    const signature = sign(null,Buffer.from(fullMessage,"utf-8"), signingKey);
+    return signature;
 }
 
 function createCommitment(responseBytes, randomness){
-    return sha256(responseBytes,randomness)
+    return sha256(responseBytes,randomness);
 } 
 
 function validateCanonicalResponse(responseBytes) {
