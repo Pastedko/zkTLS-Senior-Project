@@ -1,3 +1,4 @@
+// source for the implementation: https://sha256algorithm.com
 const {Buffer} = require('node:buffer');
 
 function sha256(inputBytes,randomness){

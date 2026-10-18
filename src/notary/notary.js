@@ -1,7 +1,7 @@
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const sha256 = require("./hashing_algorithms/sha256");
+const sha256 = require("../hashing_algorithms/sha256");
 const {
     randomBytes,
     createPrivateKey,
@@ -35,7 +35,7 @@ async function attest(address, cookie) {
     return {
         privateProverInput:{
             response: responseBytes,
-            randomnessHex: randomness
+            randomness: randomness
         },
 
         publicAttestation: {
@@ -168,6 +168,10 @@ async function makeRequest(address, cookie){
         ca: serverCertificate
     }, (res) => {
         const chunkdata = [];
+        if(res.statusCode !== 200) {
+            reject(new Error(`Request failed with status code: ${res.statusCode}`));
+            return;
+        }
         res.on("data", (chunk) => {
             chunkdata.push(chunk);
         });
@@ -184,3 +188,5 @@ attest(
     "https://localhost:3000/identity",
     "sessionToken=53e3811cba403306a1ec20c97190f00f733c67682dd04f847e743e9decba3624"
 )
+
+module.exports = {attest, isValidBirthdate}
