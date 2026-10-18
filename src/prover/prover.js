@@ -36,5 +36,26 @@ function prepareCircuit(notaryResponse, cutoffDate) {
     const birthdate = dateToNumber(identity.birthdate);
     const cutoffDate = dateToNumber(cutoffDate);
 
+    const responseArray = Buffer.alloc(Max_RESPONSE_LENGTH);
+    response.copy(responseArray);
+
+
+    //we need to split the commitment into two 128-bit integers for the circuit
+    //Circom does not support 256 integers
+    const commitmentSplit =[]
+    for (let i = 0; i < 2; i++) {
+        commitmentSplit[i] = commitment.readUInt128BE(i * 16);
+    }
+
+    return {
+        responseBytes: Array.from(responseArray),
+        randomnessLength: randomness.length,
+        randomness: Array.from(randomness),
+        birthdate: birthdate,
+        cutoff: cutoffDate,
+        commiitmentSplit: commitmentSplit,
+        identityId: identity.id,
+    }
+
 
 }
