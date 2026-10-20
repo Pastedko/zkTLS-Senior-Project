@@ -95,16 +95,16 @@ template Choice(){
 
     for(var i=0;i<3;i++){
         bits[i] = Bits(32);
-        bits.in<==in[i];
+        bits[i].in<==in[i];
     }
 
     signal result[32];
-    var value = 0
+    var value = 0;
 
     for(var i=0;i<32;i++){
         result[i]<==bits[2].out[i]+bits[0].out[i]*(bits[1].out[i]-bits[2].out[i]);
 
-        value+=result[i]*(1<<i)l
+        value+=result[i]*(1<<i);
     }
 
     out<==value;
@@ -166,7 +166,7 @@ template SHA256Compress(){
     signal words[64];
 
     for(var i=0; i<16;i++){
-        wwords[i]<==block[i];
+        words[i]<==block[i];
     }
 
     component sigma0[48];
@@ -184,7 +184,7 @@ template SHA256Compress(){
         expand[i-16].in[0]<==words[i-16];
         expand[i-16].in[1]<==sigma0[i-16].out;
         expand[i-16].in[2]<==words[i-7];
-        expand[i-16].in[3]<==sigma1[i-16].out
+        expand[i-16].in[3]<==sigma1[i-16].out;
 
         words[i]<==expand[i-16].out;
     }
@@ -206,8 +206,8 @@ template SHA256Compress(){
     component nextE[64];
 
     for(var t=0;t<64;t++){
-        bit0[t]=Sigma(2,13,22,0);
-        bitemp1[t]=Sigma(6,11,25,0);
+        sum0[t]=Sigma(2,13,22,0);
+        sum1[t]=Sigma(6,11,25,0);
 
         sum0[t].in<==state[t][0];
         sum1[t].in<==state[t][4];
@@ -225,15 +225,15 @@ template SHA256Compress(){
         temp1[t].in[1]<==sum1[t].out;
         temp1[t].in[2]<==choice[t].out;
         temp1[t].in[3]<==K[t];
-        temp1[t].in[4]<==w[t];
+        temp1[t].in[4]<==words[t];
 
         temp2[t]=AddWord(2);
         temp2[t].in[0]<==sum0[t].out;
-        temp2[t].in[0]<==majority[t].out;
+        temp2[t].in[1]<==majority[t].out;
 
         nextA[t]=AddWord(2);
-        nextA[t].in[0]=temp1[t].out;
-        nextB[t].in[1]=temp2[t].out;
+        nextA[t].in[0]<==temp1[t].out;
+        nextA[t].in[1]<==temp2[t].out;
 
         nextE[t]=AddWord(2);
         nextE[t].in[0]<==state[t][3];
