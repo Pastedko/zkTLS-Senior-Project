@@ -183,10 +183,4 @@ async function makeRequest(address, cookie){
 })
 }
 
-
-attest(
-    "https://localhost:3000/identity",
-    "sessionToken=53e3811cba403306a1ec20c97190f00f733c67682dd04f847e743e9decba3624"
-)
-
 module.exports = {attest, isValidBirthdate}

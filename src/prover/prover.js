@@ -1,6 +1,7 @@
 const sha256 = require('../hashing_algorithms/sha256');
 const {isValidBirthdate} = require('../notary/notary');
 const { Buffer } = require("node:buffer");
+const snarkjs = require("snarkjs");
 
 const MAX_RESPONSE_LENGTH = 100;
 
@@ -12,7 +13,7 @@ function dateToNumber(date){
     return parseInt(date);
 }
 
-function prepareCircuit(notaryResponse, cutoffDate) {
+function prepareCircuit(notaryResponse, cutoff) {
 
     const {response, randomness} = notaryResponse.privateProverInput;
     
@@ -34,28 +35,38 @@ function prepareCircuit(notaryResponse, cutoffDate) {
     }
 
     const birthdate = dateToNumber(identity.birthdate);
-    const cutoffDate = dateToNumber(cutoffDate);
+    const cutoffDate = dateToNumber(cutoff);
 
     const responseArray = Buffer.alloc(Max_RESPONSE_LENGTH);
     response.copy(responseArray);
 
 
-    //we need to split the commitment into two 128-bit integers for the circuit
+    //we need to split the commitment into 8 32-bit integers for the circuit
     //Circom does not support 256 integers
     const commitmentSplit =[]
-    for (let i = 0; i < 2; i++) {
-        commitmentSplit[i] = commitment.readUInt128BE(i * 16);
+    for (let i = 0; i < 8; i++) {
+        commitmentSplit[i] = commitment.readUInt32BE(i * 4);
     }
 
     return {
         responseBytes: Array.from(responseArray),
-        randomnessLength: randomness.length,
+        responseLength: response.length,
         randomness: Array.from(randomness),
         birthdate: birthdate,
         cutoff: cutoffDate,
         commiitmentSplit: commitmentSplit,
         identityId: identity.id,
     }
-
-
 }
+
+function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath){
+    const circuitInputs = prepareCircuit(notaryResponse, cutoffDate);
+    const {prorf, publicSignals} = snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
+    return {
+        proof,
+        publicSignals,
+        publicAttestation: notaryResponse.publicAttestation
+    }
+}
+
+module.exports = {generateProof, prepareCircuit}
