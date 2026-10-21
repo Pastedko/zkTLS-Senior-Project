@@ -99,4 +99,34 @@ template AgeProofSha256(){
         size.out[n-42]*(responseBytes[n-1]-125)===0;
     }
 
+    //extract the eight birthday digits
+    signal datePick[8][59];
+    component dateDigit[8];
+
+    var dateValue =0 ;
+
+    for(var j=0;j<8;j++){
+        var ascii =0;
+
+        for(var n=42;n<=100;n++){
+            datePick[j][n-42]<==size.out[n-42]*responseBytes[n-10+j];
+
+            ascii+=datePick[j][n-42];
+        }
+
+        dateValue+=ascii*(10**(7-j));
+    }
+
+    //enforce that birthdate matches the response birthdate
+    birthdate === dateValue;
+
+    //enforce birthdate<=cutoffDate
+    
+    component cutoffBits=Bits(27);
+    cutoffBits.in<==cutoffDate;
+
+    component ageDifference = Bits(28);
+    ageDifference.in<==birthdate+(2**27)-cutoffDate-1;
+
+    ageDifference.out[27]===0
 }
