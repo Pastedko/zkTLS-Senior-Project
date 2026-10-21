@@ -61,7 +61,7 @@ function prepareCircuit(notaryResponse, cutoff) {
 
 function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath){
     const circuitInputs = prepareCircuit(notaryResponse, cutoffDate);
-    const {prorf, publicSignals} = snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
+    const {proof, publicSignals} = snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
     return {
         proof,
         publicSignals,

@@ -15,9 +15,6 @@ const signingKey = createPrivateKey(
     )
 );
 
-const EXPECTED_SERVER_ADDRESS =
-    "https://localhost:3000/identity";
-
 //After testing with differnt id and name lengths it is safe to set the max response length to 100 bytes
 //as anything above that value would be unreasonable.
 const MAX_RESPONSE_LENGTH = 100;
