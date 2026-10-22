@@ -27,6 +27,23 @@ template LengthFinder(start,end){
     in===value;
 }
 
+//Ascii to digit converter
+template AsciiToDigit(){
+    signal input ascii;
+    signal output value;
+
+    component digit = LengthFinder(48,57);
+    digit.in<==ascii;
+
+    value<==ascii-48;
+}
+
+template ResponseCommitment(){
+    signal input responseBytes[100];
+    signal input responseLength;
+    signal input randomness[32];
+}
+
 template AgeProofSha256(){
     signal input responseBytes[100];
     signal input responseLength;
@@ -82,7 +99,50 @@ template AgeProofSha256(){
         }
     }
 
-    //TODO: check if the id is an integer
+    signal idPick[9][9];
+    signal idAscii[9];
+    signal idTerm[9][9];
+
+    component idDigit[9];
+
+    for(var j=0; j<9;j++){
+        var selectedAscii=0;
+        var activeDigit=0;
+
+        for(var n=1;n<=9;n++){
+            if(j<n){
+                idPick[j][n-1]<==idSize.out[n-1]*responseBytes[6+j];
+
+                activeDigit +=idSize.out[n-1];
+            }
+            else{
+                idPick[j][n-1]<==0;
+            }
+
+            selectedAscii+=idPick[j][n-1];
+        }
+
+        idAscii[j]<==selectedAscii+48*(1-activeDigit);
+        idDigit[j]=AsciiToDigit();
+        idDigit.ascii<==idAscii[j];
+    }
+
+    var reconstructedId=0;
+
+    for(var n=1;n<=9;n++){
+        for(var j=0;j<9;j++){
+            if(j<n){
+                idTerm[n-1][j]<==idSize.out[n-1]*idDigit[j].value*(10**(n-1-j));
+            }
+            else{
+                idTerm[n-1][j]<==0;
+            }
+
+            reconstructedId+=idTerm[n-1][j];
+
+            identityId===reconstructedId;
+        }
+    }
 
     //the response finally ends in ',"birthdate":"YYYYMMDD"}'
 
@@ -114,7 +174,9 @@ template AgeProofSha256(){
             ascii+=datePick[j][n-42];
         }
 
-        dateValue+=ascii*(10**(7-j));
+        dateDigit[j]=AsciiToDigit();
+        dateDigit[j].ascii<==ascii;
+        dateValue+=dateDigit[j].value*(10**(7-j));
     }
 
     //enforce that birthdate matches the response birthdate
@@ -125,8 +187,9 @@ template AgeProofSha256(){
     component cutoffBits=Bits(27);
     cutoffBits.in<==cutoffDate;
 
-    component ageDifference = Bits(28);
-    ageDifference.in<==birthdate+(2**27)-cutoffDate-1;
+    component ageDifference = Bits(27);
+    //if birthdate>cutoffDate the checks inside Bits will not pass
+    ageDifference.in<==cutoffDate-birthdate;
 
-    ageDifference.out[27]===0
+    component commitment = ResponseCommitment();
 }
