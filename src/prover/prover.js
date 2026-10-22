@@ -37,7 +37,7 @@ function prepareCircuit(notaryResponse, cutoff) {
     const birthdate = dateToNumber(identity.birthdate);
     const cutoffDate = dateToNumber(cutoff);
 
-    const responseArray = Buffer.alloc(Max_RESPONSE_LENGTH);
+    const responseArray = Buffer.alloc(MAX_RESPONSE_LENGTH);
     response.copy(responseArray);
 
 
@@ -53,15 +53,16 @@ function prepareCircuit(notaryResponse, cutoff) {
         responseLength: response.length,
         randomness: Array.from(randomness),
         birthdate: birthdate,
-        cutoff: cutoffDate,
-        commiitmentSplit: commitmentSplit,
+        cutoffDate: cutoffDate,
+        commitmentSplit: commitmentSplit,
         identityId: identity.id,
+        idLength:String(identity.id).length
     }
 }
 
-function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath){
+async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath){
     const circuitInputs = prepareCircuit(notaryResponse, cutoffDate);
-    const {proof, publicSignals} = snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
+    const {proof, publicSignals} = await snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
     return {
         proof,
         publicSignals,

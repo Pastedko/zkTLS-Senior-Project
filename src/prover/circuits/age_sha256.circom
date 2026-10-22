@@ -8,13 +8,13 @@ include "sha256_core.circom";
 //correct length between start and end
 template LengthFinder(start,end){
     signal input in;
-    signal input out[end-start+1];
+    signal output out[end-start+1];
 
     var count=0;
     var value=0;
 
     for(var i=0;i<=end-start;i++){
-        out[i]<--in=start+i?1:0;
+        out[i]<--in==start+i?1:0;
 
         //guarantees 1 or 0
         out[i]*(out[i]-1)===0;
@@ -57,7 +57,7 @@ template ResponseCommitment(){
 
         for(var n=42;n<=100;n++){
             if(p<n){
-                responsePart[p][n-42]<==size.out[n-42]*responseBytes[p];            }
+                responsePart[p][n-42]<==size.out[n-42]*responseBytes[p];
         }
         else{
             responsePart[p][n-42]<==0;
@@ -97,7 +97,7 @@ template ResponseCommitment(){
     }
 
     paddedBytes[p]<==byteValue;
-
+    }
     //initial values of the words
     var initialHash[8]=[
         0x6a09e667,
@@ -108,7 +108,7 @@ template ResponseCommitment(){
         0x9b05688c,
         0x1f83d9ab,
         0x5be0cd19
-    ]
+    ];
 
     component compress[3];
 
@@ -160,8 +160,8 @@ template AgeProofSha256(){
     component randomBits[32];
 
     for(var i=0;i<100;i++){
-        reseponseBits[i]=Bits(8);
-        reseponseBits[i].in<==responseBytes[i];
+        responseBits[i]=Bits(8);
+        responseBits[i].in<==responseBytes[i];
         var active = 0;
         for(var n=42;n<=100;n++){
             if(i<n){
@@ -191,7 +191,7 @@ template AgeProofSha256(){
     //we check if the following bytes are the expected bytes.
     for(var n=1;n<=9;n++){
         for(var j=0;j<9;j++){
-            idSize.out[n-1]*(responseBytes[6+n+j]-nameMarker[j])===0;
+            idSize.out[n-1]*(responseBytes[6+n+j]-name[j])===0;
         }
     }
 
@@ -220,7 +220,7 @@ template AgeProofSha256(){
 
         idAscii[j]<==selectedAscii+48*(1-activeDigit);
         idDigit[j]=AsciiToDigit();
-        idDigit.ascii<==idAscii[j];
+        idDigit[j].ascii<==idAscii[j];
     }
 
     var reconstructedId=0;
@@ -246,7 +246,7 @@ template AgeProofSha256(){
 
     for(var n=43;n<=100;n++){
         for(var j=0;j<14;j++){
-            size.out[n-42]*(responseBytes[n-24+j]-ending[j]===0);
+            size.out[n-42]*(responseBytes[n-24+j]-ending[j])===0;
         }
 
         //trailing '"'
@@ -305,6 +305,6 @@ template AgeProofSha256(){
     }
 }
 
-component main = {
+component main {
     public[identityId,commitmentSplit,cutoffDate]
 } = AgeProofSha256();
