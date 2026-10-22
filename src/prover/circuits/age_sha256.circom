@@ -42,6 +42,102 @@ template ResponseCommitment(){
     signal input responseBytes[100];
     signal input responseLength;
     signal input randomness[32];
+
+    signal output out[8];
+
+    component size = LengthFinder(42,100);
+    size.in<==responseLength;
+
+    signal responsePart[192][59];
+    signal randomnessPart[192][59];
+    signal paddedBytes[192];
+
+    for(var p=0;p<192;p++){
+        var byteValue = 0;
+
+        for(var n=42;n<=100;n++){
+            if(p<n){
+                responsePart[p][n-42]<==size.out[n-42]*responseBytes[p];            }
+        }
+        else{
+            responsePart[p][n-42]<==0;
+        }
+
+        if(p>=n&&p<n+32){
+            randomnessPart[p][n-42]<==size.out[n-42]*randomness[p-n];
+        }
+        else{
+            randomnessPart[p][n-42]<==0;
+        }
+        byteValue+=responsePart[p][n-42];
+        byteValue+=randomnessPart[p][n-42];
+
+        var messageLength=n+32;
+        var paddedLength=128;
+
+        if(messageLength>=120){
+            paddedLength=192;
+        }
+
+        if(p==messageLength){
+            byteValue+=size.out[n-42]*128; //append 0x80, 128 (decimal)
+        }
+
+
+        //the last 8 bytes contain the length of the message
+        //since the message length can at most fit into 2 bytes
+        //we update only the last 2 bytes
+        if(p==paddedLength-2){
+            byteValue+=size.out[n-42]*((messageLength*8)\256);//integer division
+        }
+
+        if(p==paddedLength-1){
+            byteValue+=size.out[n-42]*((messageLength*8)%256);
+        }
+    }
+
+    paddedBytes[p]<==byteValue;
+
+    //initial values of the words
+    var initialHash[8]=[
+        0x6a09e667,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19
+    ]
+
+    component compress[3];
+
+    for(var b=0;b<3;b++){
+        compress[b]=SHA256Compress();
+
+        for(var w=0;w<16;w++){
+            var offset=b*64+w*4;
+            compress[b].block[w]<==paddedBytes[offset]*16777216+paddedBytes[offset+1]*65536+paddedBytes[offset+2]*256+paddedBytes[offset+3]; //left shifts
+        }
+
+        for(var w=0;w<8;w++){
+            if(b==0){
+                compress[b].hash[w]<==initialHash[w];
+            }
+            else{
+                compress[b].hash[w]<==compress[b-1].out[w];
+            }
+        }
+    }
+    var needsThirdBlock=0;
+
+    for(var n=88;n<=100;n++){
+        needsThirdBlock+=size.out[n-42];
+    }
+
+    for(var w=0;w<8;w++){
+        out[w]<==compress[1].out[w]+needsThirdBlock*(compress[2].out[w]-compress[1].out[w]);
+    }
 }
 
 template AgeProofSha256(){
@@ -192,4 +288,23 @@ template AgeProofSha256(){
     ageDifference.in<==cutoffDate-birthdate;
 
     component commitment = ResponseCommitment();
+
+    commitment.responseLength<==responseLength;
+
+    for(var i=0;i<100;i++){
+        commitment.responseBytes[i]<==responseBytes[i];
+    }
+
+    for(var i=0;i<32;i++){
+        commitment.randomness[i]<==randomness[i];
+    }
+
+    //verify that the resulting hash equals the provided hash
+    for(var i=0;i<8;i++){
+        commitment.out[i]===commitmentSplit[i];
+    }
 }
+
+component main = {
+    public[identityId,commitmentSplit,cutoffDate]
+} = AgeProofSha256();
