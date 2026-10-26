@@ -6,7 +6,7 @@ const {attest}=require("./notary/notary");
 const {generateProof}=require("./prover/prover");
 const {verifyProof}=require("./verifier/verifier");
 
-const serverCertificate=fs.readFileSync(path.join(__dirname,"src/server/keys/cert.pem"));
+const serverCertificate=fs.readFileSync(path.join(__dirname,"server/keys/cert.pem"));
 
 function login(id,password){
     return new Promise((resolve,reject)=>{
@@ -48,12 +48,14 @@ async function main(){
         cutoffDate:"20081023"
     };
 
+     try{
     const cookie=await login(id,password);
 
     const notaryResponse = await attest(policy.serverAddress,cookie);
 
-    const artifact = await generateProof(notaryResponse,policy.cutoffDate,path.join(__dirname,"src/prover/circuits/age_sha256_js/age_sha256.shasm"),path.join(__dirname,"build/sha256/age_sha256_final.zkey"));
+    const artifact = await generateProof(notaryResponse,policy.cutoffDate,path.join(__dirname,"prover/circuits/age_sha256_js/age_sha256.wasm"),path.join(__dirname,"../build/sha256/age_sha256_final.zkey"));
 
+   
     const valid=await verifyProof(artifact,policy);
 
     if(valid){
@@ -63,3 +65,9 @@ async function main(){
         console.log("Proof is invalid");
     }
 }
+catch(err){
+    console.log(err);
+}
+}
+
+main();

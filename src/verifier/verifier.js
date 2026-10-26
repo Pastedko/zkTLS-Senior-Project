@@ -4,7 +4,7 @@ const {verify} = require("node:crypto");
 const snarkjs=require("snarkjs");
 
 const notaryPublicKey = fs.readFileSync(path.join(__dirname,"../notary/keys/public.pem"));
-const verificationKey=JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/sha256/verification_key.json","utf8")));
+const verificationKey=JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/sha256/verification_key.json"),"utf8"));
 
 async function verifyProof(artifact,policy){
     try{
