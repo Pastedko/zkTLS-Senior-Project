@@ -5,10 +5,11 @@ const { randomBytes } = require("node:crypto");
 const identities = require("./identities");
 
 const sessions = new Map();
+const cookieDurationMS = 30 * 60 * 1000; // 30 minutes
 
 function createCookieSession(userId) {
     const sessionToken = randomBytes(32).toString("hex");;
-    sessions.set(sessionToken, userId);
+    sessions.set(sessionToken, {userId, expiresAt: Date.now() + cookieDurationMS});
     return sessionToken;
 }
 
@@ -21,8 +22,13 @@ function getUserFromSession(req) {
         if (!cookie) {
             return;
         }
+
+        if(Date.now() >= sessions.get(cookie.slice("sessionToken=".length))?.expiresAt) {
+            sessions.delete(cookie.slice("sessionToken=".length));
+            return;
+        }
         const token = cookie.slice("sessionToken=".length);
-        const userId = sessions.get(token);
+        const userId = sessions.get(token)?.userId;
         const user = identities.find(u => u.id === userId);
         return user;
 }
