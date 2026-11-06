@@ -45,10 +45,10 @@ async function main(){
     const policy={
         serverAddress:"https://localhost:3000/identity",
         identity:{id},
-        cutoffDate:"20081023"
+        cutoffDate:"19081023"
     };
 
-     try{
+    try{
     const cookie=await login(id,password);
 
     const notaryResponse = await attest(policy.serverAddress,cookie);
@@ -66,7 +66,7 @@ async function main(){
     }
 }
 catch(err){
-    console.log(err);
+    console.log("Proof generation failed: invalid proof or inputs");
 }
 }
 
