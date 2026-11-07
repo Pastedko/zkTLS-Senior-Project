@@ -1,13 +1,15 @@
 const https = require("https");
 const fs = require("fs");
+const { Buffer } = require("node:buffer");
 const { randomBytes } = require("node:crypto");
 const identities = require("./identities");
 
 const sessions = new Map();
+const cookieDurationMS = 30 * 60 * 1000; // 30 minutes
 
 function createCookieSession(userId) {
     const sessionToken = randomBytes(32).toString("hex");;
-    sessions.set(sessionToken, userId);
+    sessions.set(sessionToken, {userId, expiresAt: Date.now() + cookieDurationMS});
     return sessionToken;
 }
 
@@ -18,20 +20,22 @@ function getUserFromSession(req) {
         .find(part => part.startsWith("sessionToken="));
 
         if (!cookie) {
-            res.statusCode = 401;
-            res.write("Unauthorized");
-            res.end();
+            return;
+        }
+
+        if(Date.now() >= sessions.get(cookie.slice("sessionToken=".length))?.expiresAt) {
+            sessions.delete(cookie.slice("sessionToken=".length));
             return;
         }
         const token = cookie.slice("sessionToken=".length);
-        const userId = sessions.get(token);
+        const userId = sessions.get(token)?.userId;
         const user = identities.find(u => u.id === userId);
         return user;
 }
 
 const server = https.createServer({
-    key: fs.readFileSync("key.pem"),
-    cert: fs.readFileSync("cert.pem")
+    key: fs.readFileSync("./keys/key.pem"),
+    cert: fs.readFileSync("./keys/cert.pem")
 }, (req, res) => {
 
     if (req.method === "GET" && req.url === "/identity") {
@@ -42,7 +46,9 @@ const server = https.createServer({
             res.end();
             return;
         }
-        res.write(JSON.stringify(user));
+        const response = JSON.stringify({ id: user.id, name: user.name, birthdate: user.birthDate });
+        res.write(response);
+        console.log("Response length:", Buffer.byteLength(response));
         res.end();
     }
 
