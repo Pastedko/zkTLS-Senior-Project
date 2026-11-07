@@ -2,6 +2,7 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const sha256 = require("../hashing_algorithms/sha256");
+const {poseidonCommitment} = require("../hashing_algorithms/poseidon/poseidon");
 const {
     randomBytes,
     createPrivateKey,
@@ -23,11 +24,11 @@ const serverCertificate = fs.readFileSync(
     path.join(__dirname, "../server/keys/cert.pem")
 );
 
-async function attest(address, cookie) {
+async function attest(address, cookie,algorithm) {
     const responseBytes = await makeRequest(address, cookie);
     const canonicalIdentity = validateCanonicalResponse(responseBytes);
     const randomness = randomBytes(32);
-    const commitment = createCommitment(responseBytes, randomness);
+    const commitment = createCommitment(responseBytes, randomness,algorithm);
     const signedAttestation = signAttestation(commitment, address);
     return {
         privateProverInput:{
@@ -52,9 +53,15 @@ function signAttestation(commitment,serverAddress) {
     return signature;
 }
 
-function createCommitment(responseBytes, randomness){
-    return sha256(responseBytes,randomness);
-} 
+function createCommitment(responseBytes, randomness, algorithm){
+    if(algorithm === "sha256") {
+        return sha256(responseBytes,randomness);
+    } else if(algorithm === "poseidon") {
+        return poseidonCommitment(responseBytes, randomness);
+    } else {
+        throw new Error("Unsupported algorithm");
+    }
+}
 
 function validateCanonicalResponse(responseBytes) {
     if(responseBytes.length < 1 || responseBytes.length > MAX_RESPONSE_LENGTH) {

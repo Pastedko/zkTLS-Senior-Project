@@ -1,0 +1,259 @@
+pragma circom 2.1.6;
+include "poseidon_core.circom";
+
+
+
+
+//This is a helper used to get the value of the responseLenght
+//We cannot use the raw value of the responseLenght as an array index
+//because Circom does not allow it. Instead this template will create an array
+//that looks like this [0,0,0,1,0] and we iterate over it in order to find the
+//correct length between start and end
+template LengthFinder(start,end){
+    signal input in;
+    signal output out[end-start+1];
+
+    var count=0;
+    var value=0;
+
+    for(var i=0;i<=end-start;i++){
+        out[i]<--in==start+i?1:0;
+
+        //guarantees 1 or 0
+        out[i]*(out[i]-1)===0;
+
+        count+=out[i];
+        value+=out[i]*(start+i);
+    }
+
+    count===1;
+    in===value;
+}
+
+//Ascii to digit converter
+template AsciiToDigit(){
+    signal input ascii;
+    signal output value;
+
+    component digit = LengthFinder(48,57);
+    digit.in<==ascii;
+
+    value<==ascii-48;
+}
+
+template PackPoseidonCommitment(){
+    signal input responseBytes[100];
+    signal input responseLength;
+    signal input randomness[32];
+
+    signal output out[7];
+    out[0]<==responseLength;
+
+    //Four response chunks 31,31,31,7
+    for(var i=0;i<4;i++){
+        var packed=0;
+
+        for(var j=0;j<31;j++){
+            var index=i*31+j;
+
+            if(index<100){
+                packed=packed*256+responseBytes[index];
+            }
+        }
+        out[i+1]<==packed;
+    }
+
+    var packedRandomness=0;
+
+    for(var i=0;i<31;i++){
+        packedRandomness=packedRandomness*256+randomness[i];
+    }
+    out[5]<==packedRandomness;
+    out[6]<==randomness[31];
+}
+
+template AgeProofPoseidon(){
+    signal input responseBytes[100];
+    signal input responseLength;
+    signal input randomness[32];
+    signal input birthdate;
+    signal input idLength;
+    signal input identityId;
+    signal input commitmentValue;
+    signal input cutoffDate;
+
+    component size = LengthFinder(42,100);
+    size.in<==responseLength;
+
+    component idSize= LengthFinder(1,9);
+    idSize.in<==idLength;
+
+    component responseBits[100];
+    component randomBits[32];
+
+    for(var i=0;i<100;i++){
+        responseBits[i]=Bits(8);
+        responseBits[i].in<==responseBytes[i];
+        var active = 0;
+        for(var n=42;n<=100;n++){
+            if(i<n){
+                active+=size.out[n-42];
+            }
+        }
+        //ensure that the padding is only zeros
+        (1-active)*responseBytes[i]===0;
+    }
+
+    for(var i=0;i<32;i++){
+        randomBits[i]=Bits(8);
+        randomBits[i].in<==randomness[i];
+    }
+
+    //the ascii codes of '{"id":' which is the beggining of the canonical JSON
+    var prefix[6] = [123,34,105,100,34,58];
+
+    for(var i=0;i<6;i++){
+        responseBytes[i]===prefix[i];
+    }
+
+    //after that we have ',"name":"'
+    var name[9]=[44,34,110,97,109,101,34,58,34];
+
+    //if we are on the correct index of the length, e.g. we know the actual length of the id
+    //we check if the following bytes are the expected bytes.
+    for(var n=1;n<=9;n++){
+        for(var j=0;j<9;j++){
+            idSize.out[n-1]*(responseBytes[6+n+j]-name[j])===0;
+        }
+    }
+
+    signal idPick[9][9];
+    signal idAscii[9];
+    signal idTerm[9][9];
+
+    component idDigit[9];
+
+    for(var j=0; j<9;j++){
+        var selectedAscii=0;
+        var activeDigit=0;
+
+        for(var n=1;n<=9;n++){
+            if(j<n){
+                idPick[j][n-1]<==idSize.out[n-1]*responseBytes[6+j];
+
+                activeDigit +=idSize.out[n-1];
+            }
+            else{
+                idPick[j][n-1]<==0;
+            }
+
+            selectedAscii+=idPick[j][n-1];
+        }
+
+        idAscii[j]<==selectedAscii+48*(1-activeDigit);
+        idDigit[j]=AsciiToDigit();
+        idDigit[j].ascii<==idAscii[j];
+    }
+
+    var reconstructedId=0;
+
+    for(var n=1;n<=9;n++){
+        for(var j=0;j<9;j++){
+            if(j<n){
+                idTerm[n-1][j]<==idSize.out[n-1]*idDigit[j].value*(10**(n-1-j));
+            }
+            else{
+                idTerm[n-1][j]<==0;
+            }
+
+            reconstructedId+=idTerm[n-1][j];
+
+            identityId===reconstructedId;
+        }
+    }
+
+    //the response finally ends in ',"birthdate":"YYYYMMDD"}'
+
+    var ending[14]=[44,34,98,105,114,116,104,100,97,116,101,34,58,34];
+
+    for(var n=43;n<=100;n++){
+        for(var j=0;j<14;j++){
+            size.out[n-42]*(responseBytes[n-24+j]-ending[j])===0;
+        }
+
+        //trailing '"'
+        size.out[n-42]*(responseBytes[n-2]-34)===0;
+        //trailing '}'
+        size.out[n-42]*(responseBytes[n-1]-125)===0;
+    }
+
+    //extract the eight birthday digits
+    signal datePick[8][59];
+    component dateDigit[8];
+
+    var dateValue =0 ;
+
+    for(var j=0;j<8;j++){
+        var ascii =0;
+
+        for(var n=42;n<=100;n++){
+            datePick[j][n-42]<==size.out[n-42]*responseBytes[n-10+j];
+
+            ascii+=datePick[j][n-42];
+        }
+
+        dateDigit[j]=AsciiToDigit();
+        dateDigit[j].ascii<==ascii;
+        dateValue+=dateDigit[j].value*(10**(7-j));
+    }
+
+    //enforce that birthdate matches the response birthdate
+    birthdate === dateValue;
+
+    //enforce birthdate<=cutoffDate
+    
+    component cutoffBits=Bits(27);
+    cutoffBits.in<==cutoffDate;
+
+    component ageDifference = Bits(27);
+    //if birthdate>cutoffDate the checks inside Bits will not pass
+    ageDifference.in<==cutoffDate-birthdate;
+
+    component packed=PackPoseidonInput();
+    packed.responseLength<==responseLength;
+
+    for(var i=0;i<100;i++){
+        packed.responseBytes[i]<==responseBytes[i];
+    }
+
+    for(var i=0;i<32;i++){
+        packed.randomness[i]<==randomness[i];
+    }
+
+    component commitment = Poseidon(7);
+
+    for(var i=0;i<7;i++){
+        commitment.inputs[i]<==packed.out[i];
+    }
+
+    commitment.out ==commitmentValue;
+
+    commitment.responseLength<==responseLength;
+
+    for(var i=0;i<100;i++){
+        commitment.responseBytes[i]<==responseBytes[i];
+    }
+
+    for(var i=0;i<32;i++){
+        commitment.randomness[i]<==randomness[i];
+    }
+
+    //verify that the resulting hash equals the provided hash
+    for(var i=0;i<8;i++){
+        commitment.out[i]===commitmentSplit[i];
+    }
+}
+
+component main {
+    public[identityId,commitmentSplit,cutoffDate]
+} = AgeProofPoseidon();

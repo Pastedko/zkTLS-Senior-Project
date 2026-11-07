@@ -1,4 +1,5 @@
 const sha256 = require('../hashing_algorithms/sha256');
+const {poseidonCommitment} = require('../hashing_algorithms/poseidon/poseidon');
 const {isValidBirthdate} = require('../notary/notary');
 const { Buffer } = require("node:buffer");
 const snarkjs = require("snarkjs");
@@ -13,14 +14,25 @@ function dateToNumber(date){
     return parseInt(date);
 }
 
-function prepareCircuit(notaryResponse, cutoff) {
+function prepareCircuit(notaryResponse, cutoff,algorithm) {
 
     const {response, randomness} = notaryResponse.privateProverInput;
     
     const {commitment} = notaryResponse.publicAttestation;
 
     //check that the response is valid and matches the commitment
-    const computedCommitment = sha256(response, randomness);
+    let computedCommitment;
+
+    switch(algorithm){
+        case "sha256":
+            computedCommitment = sha256(response, randomness);
+            break;
+        case "poseidon":
+            computedCommitment = poseidonCommitment(response, randomness);
+            break;
+        default:
+            throw new Error("Unsupported algorithm");
+    }
 
     if(!commitment.equals(computedCommitment)) {
         throw new Error("Commitment does not match the response and randomness");
@@ -60,8 +72,8 @@ function prepareCircuit(notaryResponse, cutoff) {
     }
 }
 
-async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath){
-    const circuitInputs = prepareCircuit(notaryResponse, cutoffDate);
+async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath,algorithm){
+    const circuitInputs = prepareCircuit(notaryResponse, cutoffDate,algorithm);
     const {proof, publicSignals} = await snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
     return {
         proof,
