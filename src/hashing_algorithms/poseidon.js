@@ -72,3 +72,36 @@ function poseidon(input){
 
     return state[0];
 }
+
+function packBytes(bytes){
+    let value=0n;
+
+    for(const byte of bytes){
+        value=value*256n+BigInt(byte);
+    }
+
+    return value;
+}
+
+function packCommitedInputs(response,randomness){
+    const paddedResponse=Buffer.alloc(100);
+    response.copy(paddedResponse);
+    return [
+        BigInt(paddedResponse.subarray(0,31)),
+        BigInt(paddedResponse.subarray(31,62)),
+        BigInt(paddedResponse.subarray(62,93)),
+        BigInt(paddedResponse.subarray(93,100)),
+        BigInt(randomness.subarray(0,31)),
+        BigInt(randomness[31])
+    ]
+}
+
+function poseidonCommitment(response,randomness){
+    const inputs=packCommitedInputs(response,randomness);
+    const digest=poseidon(inputs);
+
+    const hex=digest.toString(16).padStart(64,"0");
+    return Buffer.from(hex,"hex");
+}
+
+module.exports={poseidon,poseidonCommitment};
