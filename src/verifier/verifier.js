@@ -4,13 +4,20 @@ const {verify} = require("node:crypto");
 const snarkjs=require("snarkjs");
 
 const notaryPublicKey = fs.readFileSync(path.join(__dirname,"../notary/keys/public.pem"));
-const verificationKey=JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/sha256/verification_key.json"),"utf8"));
+const verificationKeys={
+    sha256: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/sha256/verification_key.json"),"utf8")),
+    poseidon: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/poseidon/verification_key.json"),"utf8"))
+};
 
 async function verifyProof(artifact,policy){
     try{
         const {proof,publicSignals,publicAttestation}=artifact;
-        if(!Array.isArray(publicSignals)||publicSignals.length!=10){
-            throw new Error("Expected 10 public signals");
+        const algorithm=policy.algorithm;
+
+        const verificationKey=verificationKeys[algorithm];
+        const expectedSignals=algorithm==="poseidon"?3:10;
+        if(!Array.isArray(publicSignals)||publicSignals.length!=expectedSignals){
+            throw new Error(`Expected ${expectedSignals} public signals`);
         }
 
         const {commitment,signedAttestation}=publicAttestation;
@@ -35,17 +42,26 @@ async function verifyProof(artifact,policy){
             throw new Error("Invalid notary signature");
         }
 
+        const indexOfCutoffDate=algorithm==="poseidon"?2:9;
+
+        if(publicSignals[indexOfCutoffDate]!=policy.cutoffDate){
+            throw new Error("Cutoff date does not match");
+        }
+
         if(publicSignals[0]!=policy.identity.id){
             throw new Error("Ideneity does not match");
         }
 
-        if(publicSignals[9]!=policy.cutoffDate){
-            throw new Error("Cutoff date does not match");
-        }
-
+        if(algorithm==="sha256"){
         for(let i=0;i<8;i++){
             const signedWord=commitment.readUInt32BE(i*4);
             if(publicSignals[i+1]!=signedWord){
+                throw new Error("Commitment does not match attestation")
+            }
+        }}
+        else{
+            const signedValue=BigInt('0x'+commitment.toString('hex'));
+            if(publicSignals[1]!=signedValue){
                 throw new Error("Commitment does not match attestation")
             }
         }
