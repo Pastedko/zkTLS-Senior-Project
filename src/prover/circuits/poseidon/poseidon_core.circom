@@ -75,3 +75,40 @@ template PoseidonRound(matrix,roundConstants,fullRound){
         out[i]<==mix.out[i];
    }
 }
+
+template PoseidonHash(){
+    signal input in[7];
+    signal output out;
+
+    var constants[576] = PoseidonConstants8();
+    var matrix[8][8] = PoseidonMatrix8();
+
+    for(var r=0;r<72;r++){
+        var roundConstants[8];
+
+        for(var i=0;i<8;i++){
+            roundConstants[i]=constants[r*8+i];
+        }
+
+        var fullRound=r<4||r>=68;
+
+        rounds[r]=PoseidonRound(matrix,roundConstants,fullRound);
+
+        for(var i=0;i<8;i++){
+            if(r==0){
+                //because I have 7 inputs, the first input is 0 and the rest are the inputs
+                if(i==0){
+                    rounds[r].in[i]<==0;
+                }
+                else{
+                    rounds[r].in[i]<==inputs[i-1];
+                }
+            }
+            else{
+                rounds[r].in[i]<==rounds[r-1].out[i];
+            }
+        }
+    }
+    out<==rounds[71].out[0];
+    
+}
