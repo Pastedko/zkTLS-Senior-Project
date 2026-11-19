@@ -56,7 +56,6 @@ async function main(){
 
     const artifact = await generateProof(notaryResponse,policy.cutoffDate,path.join(__dirname,"prover/circuits/poseidon/age_poseidon_js/age_poseidon.wasm"),path.join(__dirname,"../build/poseidon/age_poseidon_final.zkey"),policy.algorithm);
 
-   
     const valid=await verifyProof(artifact,policy);
 
     if(valid){
