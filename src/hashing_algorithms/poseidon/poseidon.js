@@ -105,4 +105,4 @@ function poseidonCommitment(response,randomness){
     return Buffer.from(hex,"hex");
 }
 
-module.exports={poseidon,poseidonCommitment,mod};
+module.exports={poseidon,poseidonCommitment,mod,packCommitedInputs};
