@@ -45,17 +45,17 @@ async function main(){
     const policy={
         serverAddress:"https://localhost:3000/identity",
         identity:{id},
-        cutoffDate:"19081023"
+        cutoffDate:"20081023",
+        algorithm:"poseidon"
     };
 
     try{
     const cookie=await login(id,password);
 
-    const notaryResponse = await attest(policy.serverAddress,cookie);
+    const notaryResponse = await attest(policy.serverAddress,cookie,policy.algorithm);
 
-    const artifact = await generateProof(notaryResponse,policy.cutoffDate,path.join(__dirname,"prover/circuits/age_sha256_js/age_sha256.wasm"),path.join(__dirname,"../build/sha256/age_sha256_final.zkey"));
+    const artifact = await generateProof(notaryResponse,policy.cutoffDate,path.join(__dirname,"prover/circuits/poseidon/age_poseidon_js/age_poseidon.wasm"),path.join(__dirname,"../build/poseidon/age_poseidon_final.zkey"),policy.algorithm);
 
-   
     const valid=await verifyProof(artifact,policy);
 
     if(valid){
@@ -66,6 +66,7 @@ async function main(){
     }
 }
 catch(err){
+    console.log(err);
     console.log("Proof generation failed: invalid proof or inputs");
 }
 }

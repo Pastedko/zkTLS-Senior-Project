@@ -87,11 +87,12 @@ function packCommitedInputs(response,randomness){
     const paddedResponse=Buffer.alloc(100);
     response.copy(paddedResponse);
     return [
-        BigInt(paddedResponse.subarray(0,31)),
-        BigInt(paddedResponse.subarray(31,62)),
-        BigInt(paddedResponse.subarray(62,93)),
-        BigInt(paddedResponse.subarray(93,100)),
-        BigInt(randomness.subarray(0,31)),
+        BigInt(response.length),
+        packBytes(paddedResponse.subarray(0,31)),
+        packBytes(paddedResponse.subarray(31,62)),
+        packBytes(paddedResponse.subarray(62,93)),
+        packBytes(paddedResponse.subarray(93,100)),
+        packBytes(randomness.subarray(0,31)),
         BigInt(randomness[31])
     ]
 }
@@ -104,4 +105,4 @@ function poseidonCommitment(response,randomness){
     return Buffer.from(hex,"hex");
 }
 
-module.exports={poseidon,poseidonCommitment};
+module.exports={poseidon,poseidonCommitment,mod,packCommitedInputs};

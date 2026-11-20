@@ -2,6 +2,7 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const sha256 = require("../hashing_algorithms/sha256");
+const {mimcCommitment} = require("../hashing_algorithms/mimc/mimc");
 const {poseidonCommitment} = require("../hashing_algorithms/poseidon/poseidon");
 const {
     randomBytes,
@@ -58,6 +59,8 @@ function createCommitment(responseBytes, randomness, algorithm){
         return sha256(responseBytes,randomness);
     } else if(algorithm === "poseidon") {
         return poseidonCommitment(responseBytes, randomness);
+    } else  if(algorithm === "mimc") {
+        return mimcCommitment(responseBytes, randomness);
     } else {
         throw new Error("Unsupported algorithm");
     }

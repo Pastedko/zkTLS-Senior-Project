@@ -1,4 +1,5 @@
 const sha256 = require('../hashing_algorithms/sha256');
+const {mimcCommitment} = require('../hashing_algorithms/mimc/mimc');
 const {poseidonCommitment} = require('../hashing_algorithms/poseidon/poseidon');
 const {isValidBirthdate} = require('../notary/notary');
 const { Buffer } = require("node:buffer");
@@ -30,6 +31,9 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
         case "poseidon":
             computedCommitment = poseidonCommitment(response, randomness);
             break;
+        case "mimc":
+            computedCommitment = mimcCommitment(response, randomness);
+            break;
         default:
             throw new Error("Unsupported algorithm");
     }
@@ -53,12 +57,22 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
     response.copy(responseArray);
 
 
+    
+    let commitmentInput;
+    if(algorithm === "poseidon"||algorithm === "mimc"){
+        const hex=commitment.toString('hex');
+        commitmentInput={
+            commitmentValue: BigInt('0x'+hex).toString()};
+        }
+        else{
+    const commitmentSplit =[]
     //we need to split the commitment into 8 32-bit integers for the circuit
     //Circom does not support 256 integers
-    const commitmentSplit =[]
     for (let i = 0; i < 8; i++) {
         commitmentSplit[i] = commitment.readUInt32BE(i * 4);
     }
+    commitmentInput={commitmentSplit}
+}
 
     return {
         responseBytes: Array.from(responseArray),
@@ -66,7 +80,7 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
         randomness: Array.from(randomness),
         birthdate: birthdate,
         cutoffDate: cutoffDate,
-        commitmentSplit: commitmentSplit,
+        ...commitmentInput,
         identityId: identity.id,
         idLength:String(identity.id).length
     }

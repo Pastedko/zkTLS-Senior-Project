@@ -219,7 +219,7 @@ template AgeProofPoseidon(){
     //if birthdate>cutoffDate the checks inside Bits will not pass
     ageDifference.in<==cutoffDate-birthdate;
 
-    component packed=PackPoseidonInput();
+    component packed=PackPoseidonCommitment();
     packed.responseLength<==responseLength;
 
     for(var i=0;i<100;i++){
@@ -230,30 +230,16 @@ template AgeProofPoseidon(){
         packed.randomness[i]<==randomness[i];
     }
 
-    component commitment = Poseidon(7);
+    component commitment = PoseidonHash();
 
     for(var i=0;i<7;i++){
-        commitment.inputs[i]<==packed.out[i];
+        commitment.in[i]<==packed.out[i];
     }
 
-    commitment.out ==commitmentValue;
+    commitment.out===commitmentValue;
 
-    commitment.responseLength<==responseLength;
-
-    for(var i=0;i<100;i++){
-        commitment.responseBytes[i]<==responseBytes[i];
-    }
-
-    for(var i=0;i<32;i++){
-        commitment.randomness[i]<==randomness[i];
-    }
-
-    //verify that the resulting hash equals the provided hash
-    for(var i=0;i<8;i++){
-        commitment.out[i]===commitmentSplit[i];
-    }
 }
 
 component main {
-    public[identityId,commitmentSplit,cutoffDate]
+    public[identityId,commitmentValue,cutoffDate]
 } = AgeProofPoseidon();
