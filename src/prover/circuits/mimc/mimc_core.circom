@@ -59,7 +59,7 @@ template MimcHash(){
     signal input in[7];
     signal output out;
 
-    signal accumulator[7];
+    signal accumulator[8];
     component hashes[7];
 
     accumulator[0]<==0;
