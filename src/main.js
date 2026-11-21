@@ -161,7 +161,7 @@ async function executeSingle(policy) {
 }
 
 
-function executeBenchmark(policy) {
+async function executeBenchmark(policy) {
     terminal.close();
 
     const algorithms = ["sha256", "poseidon", "mimc"];
@@ -191,6 +191,11 @@ function executeBenchmark(policy) {
                     zkeyPath = path.join(__dirname, "../build/mimc/age_mimc_final.zkey");
                     break;
             }
+
+        for(let run=0;run<warmUpRuns;run++){
+            const result=await runSingleBenchmarkRun(user,policy,wasmPath,zkeyPath);
+            console.log(result.proofTimeMs);
+        }
     }
 }
 
@@ -202,12 +207,15 @@ async function runSingleBenchmarkRun(user,policy,wasmPath,zkeyPath){
         const cookie = await login(user.id,user.password);
         const notaryResponse= await attest(policy.serverAddress,cookie,policy.algorithm);
         const proofStart=process.hrtime.bigint();
-        const artifact=generateProof(notaryResponse,policy.cutoffDate,wasmPath,zkeyPath,policy.algorithm);
-        proofTimeMs=Number(process.hrtime.bigint()-proofStart);
+        const artifact=await generateProof(notaryResponse,policy.cutoffDate,wasmPath,zkeyPath,policy.algorithm);
+        proofTimeMs=Number(process.hrtime.bigint()-proofStart)/1000000;
         const verificationStart=process.hrtime.bigint();
         const valid=await verifyProof(artifact,policy);
-        verificationTimeMs=Number(process.hrtime.bigint()-verificationStart);
+        verificationTimeMs=Number(process.hrtime.bigint()-verificationStart)/1000000;
 
+         if (globalThis.curve_bn128) {
+                    await globalThis.curve_bn128.terminate();
+                }
         return{
             success: valid,
             proofTimeMs,
