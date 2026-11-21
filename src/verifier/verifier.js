@@ -6,7 +6,8 @@ const snarkjs=require("snarkjs");
 const notaryPublicKey = fs.readFileSync(path.join(__dirname,"../notary/keys/public.pem"));
 const verificationKeys={
     sha256: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/sha256/verification_key.json"),"utf8")),
-    poseidon: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/poseidon/verification_key.json"),"utf8"))
+    poseidon: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/poseidon/verification_key.json"),"utf8")),
+    mimc: JSON.parse(fs.readFileSync(path.join(__dirname,"../../build/mimc/verification_key.json"),"utf8"))
 };
 
 async function verifyProof(artifact,policy){
@@ -15,7 +16,7 @@ async function verifyProof(artifact,policy){
         const algorithm=policy.algorithm;
 
         const verificationKey=verificationKeys[algorithm];
-        const expectedSignals=algorithm==="poseidon"?3:10;
+        const expectedSignals=algorithm==="sha256"?10:3;
         if(!Array.isArray(publicSignals)||publicSignals.length!=expectedSignals){
             throw new Error(`Expected ${expectedSignals} public signals`);
         }
@@ -42,7 +43,7 @@ async function verifyProof(artifact,policy){
             throw new Error("Invalid notary signature");
         }
 
-        const indexOfCutoffDate=algorithm==="poseidon"?2:9;
+        const indexOfCutoffDate=algorithm==="sha256"?9:2;
 
         if(publicSignals[indexOfCutoffDate]!=policy.cutoffDate){
             throw new Error("Cutoff date does not match");
