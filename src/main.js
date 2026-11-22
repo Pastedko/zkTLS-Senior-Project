@@ -165,70 +165,99 @@ async function executeBenchmark(policy) {
     terminal.close();
 
     const algorithms = ["sha256", "poseidon", "mimc"];
-    const warmUpRuns=2;
-    const measuredRuns=30;
+    const warmUpRuns = 2;
+    const measuredRuns = 30;
 
-    const user=identities.find(identity=>identity.id===1);
-    const results=[];
+    const user = identities.find(identity => identity.id === 1);
+    const results = [];
 
-    for(const algorithm of algorithms){
-        policy.algorithm=algorithm;
-        policy.identity={id:user.id};
-        
-         let wasmPath, zkeyPath;
+    for (const algorithm of algorithms) {
+        policy.algorithm = algorithm;
+        policy.identity = { id: user.id };
 
-            switch (policy.algorithm) {
-                case "sha256":
-                    wasmPath = path.join(__dirname, "prover/circuits/sha256/age_sha256_js/age_sha256.wasm");
-                    zkeyPath = path.join(__dirname, "../build/sha256/age_sha256_final.zkey");
-                    break;
-                case "poseidon":
-                    wasmPath = path.join(__dirname, "prover/circuits/poseidon/age_poseidon_js/age_poseidon.wasm");
-                    zkeyPath = path.join(__dirname, "../build/poseidon/age_poseidon_final.zkey");
-                    break;
-                case "mimc":
-                    wasmPath = path.join(__dirname, "prover/circuits/mimc/age_mimc_js/age_mimc.wasm");
-                    zkeyPath = path.join(__dirname, "../build/mimc/age_mimc_final.zkey");
-                    break;
-            }
+        let wasmPath, zkeyPath;
 
-        for(let run=0;run<warmUpRuns;run++){
-            const result=await runSingleBenchmarkRun(user,policy,wasmPath,zkeyPath);
+        switch (policy.algorithm) {
+            case "sha256":
+                wasmPath = path.join(__dirname, "prover/circuits/sha256/age_sha256_js/age_sha256.wasm");
+                zkeyPath = path.join(__dirname, "../build/sha256/age_sha256_final.zkey");
+                break;
+            case "poseidon":
+                wasmPath = path.join(__dirname, "prover/circuits/poseidon/age_poseidon_js/age_poseidon.wasm");
+                zkeyPath = path.join(__dirname, "../build/poseidon/age_poseidon_final.zkey");
+                break;
+            case "mimc":
+                wasmPath = path.join(__dirname, "prover/circuits/mimc/age_mimc_js/age_mimc.wasm");
+                zkeyPath = path.join(__dirname, "../build/mimc/age_mimc_final.zkey");
+                break;
+        }
+
+        for (let run = 0; run < warmUpRuns; run++) {
+            const result = await runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath);
             console.log(result.proofTimeMs);
         }
+
+        for(let run=0;run<measuredRuns;run++){
+            const result = await runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath);
+            results.push({
+                algorithm,
+                run:run+1,
+                ...result
+            });
+
+            
+        }
+
+        if (globalThis.curve_bn128) {
+            await globalThis.curve_bn128.terminate();
+        }
+    }
+
+    for(let algorithm of algorithms){
+        const attempts=results.filter(
+            results=>results.algorithm==algorithm
+        );
+
+        const successful=attempts.filter(result=>result.success);
+        const failures=attempts.length-successful.length;
+
+        const averageProof=successful.reduce((sum,result)=>sum+=result.proofTimeMs,0)/successful.length;
+        const averageVerification=successful.reduce((sum,result)=>sum+=result.verificationTimeMs,0)/successful.length;
+
+        console.log("Algorithm: "+algorithm);
+        console.log("Average proof time: "+averageProof);
+        console.log("Average verification time: "+averageVerification);
     }
 }
 
-async function runSingleBenchmarkRun(user,policy,wasmPath,zkeyPath){
-    let proofTimeMs=null;
-    let verificationTimeMs=null;
+async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
+    let proofTimeMs = null;
+    let verificationTimeMs = null;
 
-    try{
-        const cookie = await login(user.id,user.password);
-        const notaryResponse= await attest(policy.serverAddress,cookie,policy.algorithm);
-        const proofStart=process.hrtime.bigint();
-        const artifact=await generateProof(notaryResponse,policy.cutoffDate,wasmPath,zkeyPath,policy.algorithm);
-        proofTimeMs=Number(process.hrtime.bigint()-proofStart)/1000000;
-        const verificationStart=process.hrtime.bigint();
-        const valid=await verifyProof(artifact,policy);
-        verificationTimeMs=Number(process.hrtime.bigint()-verificationStart)/1000000;
+    try {
+        const cookie = await login(user.id, user.password);
+        const notaryResponse = await attest(policy.serverAddress, cookie, policy.algorithm);
+        const proofStart = process.hrtime.bigint();
+        const artifact = await generateProof(notaryResponse, policy.cutoffDate, wasmPath, zkeyPath, policy.algorithm);
+        proofTimeMs = Number(process.hrtime.bigint() - proofStart) / 1000000;
+        const verificationStart = process.hrtime.bigint();
+        const valid = await verifyProof(artifact, policy);
+        verificationTimeMs = Number(process.hrtime.bigint() - verificationStart) / 1000000;
 
-         if (globalThis.curve_bn128) {
-                    await globalThis.curve_bn128.terminate();
-                }
-        return{
+
+        return {
             success: valid,
             proofTimeMs,
             verificationTimeMs,
-            error:valid?null:"Invalid proof"
+            error: valid ? null : "Invalid proof"
         };
     }
-    catch(err){
-        return{
-            sucess:false,
+    catch (err) {
+        return {
+            success: false,
             proofTimeMs,
             verificationTimeMs,
-            error:err.message
+            error: err.message
         };
     }
 }
