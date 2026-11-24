@@ -52,8 +52,6 @@ async function main() {
         cutoffDate: "20081023",
     };
 
-
-
     console.log("Select an execution type:");
     console.log("1. Single execution");
     console.log("2. Benchmark execution");
@@ -128,10 +126,16 @@ async function executeSingle(policy) {
                     break;
             }
 
-            try {
+            try{
                 const cookie = await login(user.id, user.password);
 
                 const notaryResponse = await attest(policy.serverAddress, cookie, policy.algorithm);
+            }
+            catch(err){
+                console.log("Error in server communication");
+                return;
+            }
+            try {
 
                 const artifact = await generateProof(notaryResponse, policy.cutoffDate, wasmPath, zkeyPath, policy.algorithm);
 
@@ -145,7 +149,6 @@ async function executeSingle(policy) {
                 }
             }
             catch (err) {
-                console.log(err);
                 console.log("Proof generation failed: invalid proof or inputs");
             }
             finally {
