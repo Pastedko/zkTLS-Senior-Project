@@ -1,3 +1,8 @@
+// Parameter source: iden3/circomlibjs, version 0.1.7.
+// https://github.com/iden3/circomlibjs
+// Upstream package licence: GPL-3.0.
+// Parameters are not original contributions of this project.
+
 const {mod,packCommitedInputs} = require("../poseidon/poseidon");
 const roundConstants = require("./mimc_constants.json").map(value => BigInt(value));
 const ROUNDS=91;

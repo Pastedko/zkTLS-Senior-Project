@@ -168,9 +168,11 @@ template AgeProofPoseidon(){
 
             reconstructedId+=idTerm[n-1][j];
 
-            identityId===reconstructedId;
+            
         }
     }
+
+    identityId===reconstructedId;
 
     //the response finally ends in ',"birthdate":"YYYYMMDD"}'
 

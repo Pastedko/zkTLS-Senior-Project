@@ -1,5 +1,9 @@
-const {C,M}=require("./poseidon_constants.json");
+// Parameter source: iden3/circomlibjs, version 0.1.7.
+// https://github.com/iden3/circomlibjs
+// Upstream package licence: GPL-3.0.
+// Parameters are not original contributions of this project.
 
+const {C,M}=require("./poseidon_constants.json");
 const fieldPrime=21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const STATE_WIDTH=8;
 const FULL_ROUNDS=8;
