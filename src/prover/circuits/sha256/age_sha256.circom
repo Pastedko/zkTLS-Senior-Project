@@ -236,10 +236,12 @@ template AgeProofSha256(){
 
             reconstructedId+=idTerm[n-1][j];
 
-            identityId===reconstructedId;
+            
         }
     }
 
+    identityId===reconstructedId;
+    
     //the response finally ends in ',"birthdate":"YYYYMMDD"}'
 
     var ending[14]=[44,34,98,105,114,116,104,100,97,116,101,34,58,34];

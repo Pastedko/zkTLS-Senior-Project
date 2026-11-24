@@ -1,3 +1,8 @@
+// Parameter source: iden3/circomlibjs, version 0.1.7.
+// https://github.com/iden3/circomlibjs
+// Upstream package licence: GPL-3.0.
+// Parameters are not original contributions of this project.
+
 pragma circom 2.1.6;
 
 function MiMCConstants() {

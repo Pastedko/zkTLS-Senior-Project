@@ -26,12 +26,15 @@ test("SHA256 compress", async () => {
     ];
 
     const wasmPath = path.join(
+        __dirname,
         "sha256_compress_test_js",
         "sha256_compress_test.wasm"
     );
 
-    const witnessPath = "sha256_compress_test.wtns";
-
+    const witnessPath = path.join(
+        __dirname,
+        "sha256_compress_test.wtns"
+    );
     await snarkjs.wtns.calculate({ hash, block }, wasmPath, witnessPath);
 
     const witness = await snarkjs.wtns.exportJson(witnessPath);

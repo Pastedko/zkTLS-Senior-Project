@@ -226,6 +226,7 @@ async function executeBenchmark(policy) {
         const verificationStats=timeCalculationHelper(successful.map(result=>result.verificationTimeMs));
         const averageProofSize=successful.reduce((sum,result)=>sum+=result.proofSizeBytes,0)/successful.length;
         const sizeStats=timeCalculationHelper(successful.map(result=>result.proofSizeBytes));
+        const averageArtifactSize=successful.reduce((sum,result)=>sum+=result.artifactSizeBytes,0)/successful.length;
         
         console.log("Algorithm: "+algorithm);
         console.log("Successful runs: "+successful.length+" Failed runs: "+failures);
@@ -233,15 +234,33 @@ async function executeBenchmark(policy) {
         console.log("Average verification time: "+averageVerification);
         console.log("Average proof size: "+averageProofSize);
 
-        const resultsPath=path.join(__dirname,"../build/benchmark_results.json");
-        fs.writeFileSync(resultsPath,JSON.stringify(results));
+        
     }
+    const resultsPath=path.join(__dirname,"../build/benchmark_results.json");
+        fs.writeFileSync(resultsPath,JSON.stringify(results));
+    const csvRows=[
+        "algorithm,run,success,proofTimeMs,verificationTimeMs,proofSizeBytes,artifactSizeBytes",
+        ...results.map(result=>[
+            result.algorithm,
+            result.run,
+            result.success,
+            result.proofTimeMs,
+            result.verificationTimeMs,
+            result.proofSizeBytes,
+            result.artifactSizeBytes
+        ].join(","))
+    ];
+
+    const csvPath=path.join(__dirname,"../build/benchmark_results.csv");
+
+    fs.writeFileSync(csvPath,csvRows.join("\n"));
 }
 
 async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
     let proofTimeMs = null;
     let verificationTimeMs = null;
     let proofSizeBytes=null;
+    let artifactSizeBytes=null;
 
     try {
         const cookie = await login(user.id, user.password);
@@ -250,6 +269,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
         const artifact = await generateProof(notaryResponse, policy.cutoffDate, wasmPath, zkeyPath, policy.algorithm);
         proofTimeMs = Number(process.hrtime.bigint() - proofStart) / 1000000;
         proofSizeBytes=Buffer.byteLength(JSON.stringify(artifact.proof),"utf8");
+        artifactSizeBytes = Buffer.byteLength(JSON.stringify(artifact),"utf8");
         const verificationStart = process.hrtime.bigint();
         const valid = await verifyProof(artifact, policy);
         verificationTimeMs = Number(process.hrtime.bigint() - verificationStart) / 1000000;
@@ -260,6 +280,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
             proofTimeMs,
             verificationTimeMs,
             proofSizeBytes,
+            artifactSizeBytes,
             error: valid ? null : "Invalid proof"
         };
     }
@@ -269,6 +290,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
             proofTimeMs,
             verificationTimeMs,
             proofSizeBytes,
+            artifactSizeBytes,
             error: err.message
         };
     }
@@ -276,7 +298,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
 
 function timeCalculationHelper(values){
     const mean=values.reduce((sum,value)=>sum+=value,0)/values.length;
-    const standardDev=Math.sqrt(value.reduce((sum,value)=>sum+(value-mean)**2,0)/(values.length-1));
+    const standardDev=Math.sqrt(values.reduce((sum,value)=>sum+(value-mean)**2,0)/(values.length-1));
 
     return{
         min:Math.min(...values),
