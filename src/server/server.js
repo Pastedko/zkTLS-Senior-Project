@@ -9,7 +9,7 @@ const cookieDurationMS = 30 * 60 * 1000; // 30 minutes
 
 function createCookieSession(userId) {
     const sessionToken = randomBytes(32).toString("hex");;
-    sessions.set(sessionToken, {userId, expiresAt: Date.now() + cookieDurationMS});
+    sessions.set(sessionToken, { userId, expiresAt: Date.now() + cookieDurationMS });
     return sessionToken;
 }
 
@@ -19,18 +19,18 @@ function getUserFromSession(req) {
         .map(part => part.trim())
         .find(part => part.startsWith("sessionToken="));
 
-        if (!cookie) {
-            return;
-        }
+    if (!cookie) {
+        return;
+    }
 
-        if(Date.now() >= sessions.get(cookie.slice("sessionToken=".length))?.expiresAt) {
-            sessions.delete(cookie.slice("sessionToken=".length));
-            return;
-        }
-        const token = cookie.slice("sessionToken=".length);
-        const userId = sessions.get(token)?.userId;
-        const user = identities.find(u => u.id === userId);
-        return user;
+    if (Date.now() >= sessions.get(cookie.slice("sessionToken=".length))?.expiresAt) {
+        sessions.delete(cookie.slice("sessionToken=".length));
+        return;
+    }
+    const token = cookie.slice("sessionToken=".length);
+    const userId = sessions.get(token)?.userId;
+    const user = identities.find(u => u.id === userId);
+    return user;
 }
 
 const server = https.createServer({
@@ -39,8 +39,8 @@ const server = https.createServer({
 }, (req, res) => {
 
     if (req.method === "GET" && req.url === "/identity") {
-        const user=getUserFromSession(req);
-        if(!user){
+        const user = getUserFromSession(req);
+        if (!user) {
             res.statusCode = 401;
             res.write("Unauthorized");
             res.end();
@@ -58,7 +58,21 @@ const server = https.createServer({
             body += chunk.toString();
         });
         req.on("end", () => {
-            const { id, password } = JSON.parse(body);
+            let credentials;
+            try {
+                credentials = JSON.parse(body);
+            }
+            catch {
+                res.statusCode = 400;
+                res.end("Invalid JSON");
+                return;
+            }
+            if(credentials==null){
+                res.statusCode = 400;
+                res.end("Invalid JSON");
+                return;
+            }
+            const {id,password}=credentials;
             const user = identities.find(u => u.id === id && u.password === password);
             if (user) {
                 const sessionToken = createCookieSession(user.id);
