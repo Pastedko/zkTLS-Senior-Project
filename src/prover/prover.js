@@ -1,13 +1,13 @@
 const sha256 = require('../hashing_algorithms/sha256');
-const {mimcCommitment} = require('../hashing_algorithms/mimc/mimc');
-const {poseidonCommitment} = require('../hashing_algorithms/poseidon/poseidon');
-const {isValidBirthdate} = require('../notary/notary');
+const { mimcCommitment } = require('../hashing_algorithms/mimc/mimc');
+const { poseidonCommitment } = require('../hashing_algorithms/poseidon/poseidon');
+const { isValidBirthdate } = require('../notary/notary');
 const { Buffer } = require("node:buffer");
 const snarkjs = require("snarkjs");
 
 const MAX_RESPONSE_LENGTH = 100;
 
-function dateToNumber(date){
+function dateToNumber(date) {
     const isValid = isValidBirthdate(date);
     if (!isValid) {
         throw new Error("Invalid date");
@@ -15,16 +15,16 @@ function dateToNumber(date){
     return parseInt(date);
 }
 
-function prepareCircuit(notaryResponse, cutoff,algorithm) {
+function prepareCircuit(notaryResponse, cutoff, algorithm) {
 
-    const {response, randomness} = notaryResponse.privateProverInput;
-    
-    const {commitment} = notaryResponse.publicAttestation;
+    const { response, randomness } = notaryResponse.privateProverInput;
+
+    const { commitment } = notaryResponse.publicAttestation;
 
     //check that the response is valid and matches the commitment
     let computedCommitment;
 
-    switch(algorithm){
+    switch (algorithm) {
         case "sha256":
             computedCommitment = sha256(response, randomness);
             break;
@@ -38,15 +38,15 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
             throw new Error("Unsupported algorithm");
     }
 
-    if(!commitment.equals(computedCommitment)) {
+    if (!commitment.equals(computedCommitment)) {
         throw new Error("Commitment does not match the response and randomness");
     }
 
-    const decoder= new TextDecoder("utf-8", { fatal: true });
+    const decoder = new TextDecoder("utf-8", { fatal: true });
 
     const identity = JSON.parse(decoder.decode(response));
 
-    if(identity === null || typeof identity !== "object" || Array.isArray(identity)) {
+    if (identity === null || typeof identity !== "object" || Array.isArray(identity)) {
         throw new Error("Response is not a valid JSON object");
     }
 
@@ -56,23 +56,22 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
     const responseArray = Buffer.alloc(MAX_RESPONSE_LENGTH);
     response.copy(responseArray);
 
-
-    
     let commitmentInput;
-    if(algorithm === "poseidon"||algorithm === "mimc"){
-        const hex=commitment.toString('hex');
-        commitmentInput={
-            commitmentValue: BigInt('0x'+hex).toString()};
-        }
-        else{
-    const commitmentSplit =[]
-    //we need to split the commitment into 8 32-bit integers for the circuit
-    //Circom does not support 256 integers
-    for (let i = 0; i < 8; i++) {
-        commitmentSplit[i] = commitment.readUInt32BE(i * 4);
+    if (algorithm === "poseidon" || algorithm === "mimc") {
+        const hex = commitment.toString('hex');
+        commitmentInput = {
+            commitmentValue: BigInt('0x' + hex).toString()
+        };
     }
-    commitmentInput={commitmentSplit}
-}
+    else {
+        const commitmentSplit = []
+        //we need to split the commitment into 8 32-bit integers for the circuit
+        //Circom does not support 256 integers
+        for (let i = 0; i < 8; i++) {
+            commitmentSplit[i] = commitment.readUInt32BE(i * 4);
+        }
+        commitmentInput = { commitmentSplit }
+    }
 
     return {
         responseBytes: Array.from(responseArray),
@@ -82,13 +81,13 @@ function prepareCircuit(notaryResponse, cutoff,algorithm) {
         cutoffDate: cutoffDate,
         ...commitmentInput,
         identityId: identity.id,
-        idLength:String(identity.id).length
+        idLength: String(identity.id).length
     }
 }
 
-async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath,algorithm){
-    const circuitInputs = prepareCircuit(notaryResponse, cutoffDate,algorithm);
-    const {proof, publicSignals} = await snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
+async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath, algorithm) {
+    const circuitInputs = prepareCircuit(notaryResponse, cutoffDate, algorithm);
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(circuitInputs, wasmPath, zkeyPath);
     return {
         proof,
         publicSignals,
@@ -96,4 +95,4 @@ async function generateProof(notaryResponse, cutoffDate, wasmPath, zkeyPath,algo
     }
 }
 
-module.exports = {generateProof, prepareCircuit}
+module.exports = { generateProof }
