@@ -77,7 +77,7 @@ after(async () => {
 });
 
 test("verifier accepts a valid signed artifact", async () => {
-    assert.equal(await verifyProof(artifact, policy), true);
+    assert.equal((await verifyProof(artifact, policy)).valid, true);
 });
 
 test("verifier rejects an altered notary signature", async () => {
@@ -95,7 +95,7 @@ test("verifier rejects an altered notary signature", async () => {
         }
     };
 
-    assert.equal(await verifyProof(alteredArtifact, policy), false);
+    assert.equal((await verifyProof(alteredArtifact, policy)).valid, false);
 });
 
 test("verifier rejects a different expected identity", async () => {
@@ -104,7 +104,7 @@ test("verifier rejects a different expected identity", async () => {
         identity: { id: 2 }
     };
 
-    assert.equal(await verifyProof(artifact, alteredPolicy), false);
+    assert.equal((await verifyProof(artifact, alteredPolicy)).valid, false);
 });
 
 test("verifier rejects a different required cutoff", async () => {
@@ -113,7 +113,7 @@ test("verifier rejects a different required cutoff", async () => {
         cutoffDate: "20081024"
     };
 
-    assert.equal(await verifyProof(artifact, alteredPolicy), false);
+    assert.equal((await verifyProof(artifact, alteredPolicy)).valid, false);
 });
 
 test("verifier rejects a different expected server", async () => {
@@ -122,7 +122,7 @@ test("verifier rejects a different expected server", async () => {
         serverAddress: "https://invalid.server/identity"
     };
 
-    assert.equal(await verifyProof(artifact, alteredPolicy), false);
+    assert.equal((await verifyProof(artifact, alteredPolicy)).valid, false);
 });
 
 test("verifier rejects a public commitment that differs from the attestation", async () => {
@@ -137,7 +137,7 @@ test("verifier rejects a public commitment that differs from the attestation", a
         publicSignals
     };
 
-    assert.equal(await verifyProof(alteredArtifact, policy), false);
+    assert.equal((await verifyProof(alteredArtifact, policy)).valid, false);
 });
 
 test("verifier rejects a changed cutoff even when the policy matches it", async () => {
@@ -156,7 +156,7 @@ test("verifier rejects a changed cutoff even when the policy matches it", async 
     };
 
     assert.equal(
-        await verifyProof(alteredArtifact, alteredPolicy),
+        (await verifyProof(alteredArtifact, alteredPolicy)).valid,
         false
     );
 });

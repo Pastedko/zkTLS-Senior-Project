@@ -139,13 +139,13 @@ async function executeSingle(policy) {
 
                 const artifact = await generateProof(notaryResponse, policy.cutoffDate, wasmPath, zkeyPath, policy.algorithm);
 
-                const valid = await verifyProof(artifact, policy);
+                const result = await verifyProof(artifact, policy);
 
-                if (valid) {
+                if (result.valid) {
                     console.log("Proof is valid")
                 }
                 else {
-                    console.log("Proof is invalid");
+                    console.log(`Proof is invalid: ${result.reason}`);
                 }
             }
             catch (err) {
@@ -274,9 +274,8 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
         proofSizeBytes=Buffer.byteLength(JSON.stringify(artifact.proof),"utf8");
         artifactSizeBytes = Buffer.byteLength(JSON.stringify(artifact),"utf8");
         const verificationStart = process.hrtime.bigint();
-        const valid = await verifyProof(artifact, policy);
+        const result = await verifyProof(artifact, policy);
         verificationTimeMs = Number(process.hrtime.bigint() - verificationStart) / 1000000;
-
 
         return {
             success: valid,
@@ -284,7 +283,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
             verificationTimeMs,
             proofSizeBytes,
             artifactSizeBytes,
-            error: valid ? null : "Invalid proof"
+            error: result.valid ? null : result.reason
         };
     }
     catch (err) {
@@ -294,7 +293,7 @@ async function runSingleBenchmarkRun(user, policy, wasmPath, zkeyPath) {
             verificationTimeMs,
             proofSizeBytes,
             artifactSizeBytes,
-            error: err.message
+            error: result.reason
         };
     }
 }
